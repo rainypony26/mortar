@@ -9,7 +9,10 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const DB_PATH = path.join(__dirname, 'data', 'db.json');
+// Di serverless Vercel, filesystem bersifat read-only kecuali folder /tmp
+const DB_PATH = process.env.VERCEL 
+  ? path.join('/tmp', 'db.json') 
+  : path.join(__dirname, 'data', 'db.json');
 
 app.use(cors());
 app.use(express.json());
@@ -314,7 +317,11 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`🚀 Mortar Monitoring API running on http://localhost:${PORT}`);
-});
+// Start Server jika dijalankan lokal (bukan serverless Vercel)
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Mortar Monitoring API running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
