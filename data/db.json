@@ -1,0 +1,78 @@
+{
+  "materials": [
+    {
+      "id": "mat-1",
+      "code": "KP-150",
+      "name": "Kapur mesh 150",
+      "unit": "Ton",
+      "currentStock": 0,
+      "minStock": 20,
+      "maxStock": 100
+    },
+    {
+      "id": "mat-2",
+      "code": "KP-200",
+      "name": "Kapur mesh 200",
+      "unit": "Ton",
+      "currentStock": 0,
+      "minStock": 20,
+      "maxStock": 100
+    },
+    {
+      "id": "mat-3",
+      "code": "AD-NXC",
+      "name": "Additive nexco",
+      "unit": "Kg",
+      "currentStock": 0,
+      "minStock": 50,
+      "maxStock": 250
+    },
+    {
+      "id": "mat-4",
+      "code": "AD-WLM",
+      "name": "Additive wellmocell",
+      "unit": "Kg",
+      "currentStock": 0,
+      "minStock": 40,
+      "maxStock": 200
+    },
+    {
+      "id": "mat-5",
+      "code": "PS-SLK",
+      "name": "Pasir silika",
+      "unit": "Kg",
+      "currentStock": 0,
+      "minStock": 5000,
+      "maxStock": 50000
+    },
+    {
+      "id": "mat-6",
+      "code": "SM-PCC",
+      "name": "Semen pcc",
+      "unit": "Ton",
+      "currentStock": 0,
+      "minStock": 25,
+      "maxStock": 120
+    },
+    {
+      "id": "mat-7",
+      "code": "KB-WVN",
+      "name": "Woven",
+      "unit": "Pcs",
+      "currentStock": 0,
+      "minStock": 1500,
+      "maxStock": 10000
+    },
+    {
+      "id": "mat-8",
+      "code": "KB-PPR",
+      "name": "Paper",
+      "unit": "Pcs",
+      "currentStock": 0,
+      "minStock": 1200,
+      "maxStock": 8000
+    }
+  ],
+  "monthlyPlans": [],
+  "transactions": []
+}
