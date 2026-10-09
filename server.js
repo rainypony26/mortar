@@ -41,6 +41,17 @@ function readDb() {
       fs.mkdirSync(dataDir, { recursive: true });
     }
     if (!fs.existsSync(DB_PATH)) {
+      // Jika di Vercel dan file awal di data/db.json ada, salin ke /tmp
+      const localSeedPath = path.join(__dirname, 'data', 'db.json');
+      if (process.env.VERCEL && fs.existsSync(localSeedPath)) {
+        try {
+          const seedContent = fs.readFileSync(localSeedPath, 'utf-8');
+          fs.writeFileSync(DB_PATH, seedContent, 'utf-8');
+          return JSON.parse(seedContent);
+        } catch (e) {
+          // fallback
+        }
+      }
       fs.writeFileSync(DB_PATH, JSON.stringify(initialData, null, 2), 'utf-8');
       return initialData;
     }
