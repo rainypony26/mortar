@@ -177,6 +177,7 @@ export const api = {
     notes: string;
     operator: string;
     date: string;
+    forProduct?: string;
   }): Promise<{ success: boolean; transaction: Transaction; updatedMaterial: Material }> {
     try {
       const res = await fetch(`${API_BASE}/transactions`, {
@@ -224,6 +225,7 @@ export const api = {
       currentStock: mat.currentStock,
       notes: payload.notes || '-',
       operator: payload.operator || 'Operator',
+      forProduct: payload.forProduct || '',
       createdAt: new Date().toISOString()
     };
 

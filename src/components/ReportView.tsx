@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { 
   Printer, 
   Download, 
-  Factory
+  Factory,
+  Layers,
+  PackageCheck
 } from 'lucide-react';
 import type { Material, MonthlyPlan, Transaction } from '../types';
 
@@ -35,6 +37,16 @@ export const ReportView: React.FC<ReportProps> = ({
     return acc;
   }, {} as Record<string, number>);
 
+  // Agregasi Pemakaian per Produk (dari mutasi keluar)
+  const pemakaianPerProduk = transactions
+    .filter(t => t.type === 'out' && t.forProduct)
+    .reduce((acc, t) => {
+      const prodName = t.forProduct || 'Lainnya';
+      if (!acc[prodName]) acc[prodName] = {};
+      acc[prodName][t.materialName] = (acc[prodName][t.materialName] || 0) + t.amount;
+      return acc;
+    }, {} as Record<string, Record<string, number>>);
+
   const handlePrint = () => {
     window.print();
   };
@@ -52,6 +64,16 @@ export const ReportView: React.FC<ReportProps> = ({
       csv += `"${m.name}","${m.unit}",${planItem?.estimasi || 0},${planItem?.realisasi || 0},${totalMasukByMat[m.id] || 0},${totalKeluarByMat[m.id] || 0},${m.currentStock},"${isLow ? 'MENIPIS' : 'AMAN'}"\n`;
     });
 
+    if (currentPlan?.productsPlan && currentPlan.productsPlan.length > 0) {
+      csv += '\nRINCIAN KEBUTUHAN MATERIAL PER PRODUK MORTAR\n';
+      csv += 'Nama Produk,Material,Estimasi Kebutuhan,Satuan\n';
+      currentPlan.productsPlan.forEach(p => {
+        p.requirements.filter(r => r.estimasi > 0).forEach(r => {
+          csv += `"${p.productName}","${r.materialName}",${r.estimasi},"${r.unit}"\n`;
+        });
+      });
+    }
+
     const encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csv);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -61,6 +83,8 @@ export const ReportView: React.FC<ReportProps> = ({
     document.body.removeChild(link);
   };
 
+  const activeProductsPlan = currentPlan?.productsPlan || [];
+
   return (
     <div className="space-y-6 pb-16 print:p-0 print:space-y-4 print:text-black">
       
@@ -68,7 +92,7 @@ export const ReportView: React.FC<ReportProps> = ({
       <div className="flex items-center justify-between print:hidden">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-[#1d1d1f]">
-            Laporan Material
+            Laporan Material & Produksi
           </h1>
           <span className="text-xs text-[#86868b]">
             Periode: <strong className="text-[#1d1d1f]">{currentPlan?.monthName || 'Oktober 2026'}</strong>
@@ -106,11 +130,12 @@ export const ReportView: React.FC<ReportProps> = ({
               </h2>
             </div>
             <div className="text-xs text-[#86868b] print:text-neutral-600 mt-0.5">
-              Laporan Kontrol & Mutasi 8 Material Utama
+              Laporan Kontrol, Perencanaan Produk & Mutasi 8 Material Utama
             </div>
           </div>
           <div className="text-right text-xs text-[#86868b] print:text-neutral-600 font-mono">
             <div>Periode: <strong className="text-[#1d1d1f] print:text-black">{currentPlan?.monthName || 'Oktober 2026'}</strong></div>
+            <div>Metode: <strong>{currentPlan?.planType === 'by_product' ? 'Berdasarkan Produk' : 'Material Tok'}</strong></div>
             <div>Tanggal: {new Date().toLocaleDateString('id-ID')}</div>
           </div>
         </div>
@@ -118,7 +143,7 @@ export const ReportView: React.FC<ReportProps> = ({
         {/* Ringkasan 8 Material */}
         <div>
           <h3 className="text-xs font-bold text-[#86868b] uppercase tracking-wider mb-2">
-            Rekapitulasi 8 Material Utama
+            1. Rekapitulasi 8 Material Utama Pabrik
           </h3>
 
           <div className="overflow-x-auto rounded-xl border border-black/[0.04] print:border-black">
@@ -127,10 +152,10 @@ export const ReportView: React.FC<ReportProps> = ({
                 <tr>
                   <th className="py-2.5 px-3">Material</th>
                   <th className="py-2.5 px-3">Satuan</th>
-                  <th className="py-2.5 px-3 text-right">Estimasi Rencana</th>
+                  <th className="py-2.5 px-3 text-right">Target Kebutuhan</th>
                   <th className="py-2.5 px-3 text-right">Realisasi Pakai</th>
                   <th className="py-2.5 px-3 text-right">Total Masuk</th>
-                  <th className="py-2.5 px-3 text-right">Stok Fisik</th>
+                  <th className="py-2.5 px-3 text-right">Stok Fisik Gudang</th>
                   <th className="py-2.5 px-3 text-center">Status</th>
                 </tr>
               </thead>
@@ -160,6 +185,94 @@ export const ReportView: React.FC<ReportProps> = ({
             </table>
           </div>
         </div>
+
+        {/* 2. Rincian Kebutuhan per Produk Mortar (Jika Ada) */}
+        {activeProductsPlan.length > 0 && (
+          <div className="pt-2">
+            <h3 className="text-xs font-bold text-[#86868b] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[#34c759]" />
+              <span>2. Rincian Target Kebutuhan per Produk Mortar yang Diproduksi</span>
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {activeProductsPlan.map(prod => {
+                const used = prod.requirements.filter(r => r.estimasi > 0);
+                return (
+                  <div 
+                    key={prod.productId}
+                    className="p-4 rounded-xl border border-black/[0.05] bg-[#fbfbfd] print:bg-white print:border-black space-y-2.5"
+                  >
+                    <div className="flex items-center justify-between pb-1.5 border-b border-[#f2f2f7] print:border-black">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-[#1d1d1f] print:text-black">
+                        <PackageCheck className="w-3.5 h-3.5 text-[#34c759]" />
+                        <span>{prod.productName}</span>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#f5f5f7] print:border font-mono">
+                        {used.length} Material
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      {used.length === 0 ? (
+                        <div className="text-[11px] text-[#86868b] italic">Tidak ada estimasi material</div>
+                      ) : (
+                        used.map(req => (
+                          <div key={req.materialId} className="flex justify-between items-center text-xs py-1 border-b border-black/[0.02]">
+                            <span className="text-[#1d1d1f] print:text-black">{req.materialName}</span>
+                            <span className="font-mono font-bold text-[#34c759] print:text-black">
+                              {req.estimasi} {req.unit}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 3. Realisasi Pemakaian Riil per Produk dari Transaksi Keluar */}
+        {Object.keys(pemakaianPerProduk).length > 0 && (
+          <div className="pt-2">
+            <h3 className="text-xs font-bold text-[#86868b] uppercase tracking-wider mb-2">
+              3. Pemakaian Riil Material per Produk (Berdasarkan Mutasi Keluar)
+            </h3>
+
+            <div className="overflow-x-auto rounded-xl border border-black/[0.04] print:border-black">
+              <table className="w-full text-left text-xs text-[#1d1d1f] print:text-black">
+                <thead className="bg-[#f5f5f7] print:bg-neutral-100 text-[#86868b] print:text-black text-[11px] uppercase border-b border-[#f2f2f7]">
+                  <tr>
+                    <th className="py-2 px-3">Produk Mortar</th>
+                    <th className="py-2 px-3">Material yang Dipakai</th>
+                    <th className="py-2 px-3 text-right">Jumlah Terpakai</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#f2f2f7] print:divide-black">
+                  {Object.entries(pemakaianPerProduk).map(([prodName, mats]) => (
+                    Object.entries(mats).map(([matName, totalAmt], idx) => (
+                      <tr key={`${prodName}-${matName}`}>
+                        {idx === 0 ? (
+                          <td 
+                            rowSpan={Object.keys(mats).length} 
+                            className="py-2 px-3 font-bold align-top border-r border-[#f2f2f7] bg-[#fbfbfd]/50"
+                          >
+                            {prodName}
+                          </td>
+                        ) : null}
+                        <td className="py-2 px-3 text-[#1d1d1f]">{matName}</td>
+                        <td className="py-2 px-3 text-right font-mono font-bold text-[#ff3b30] print:text-black">
+                          {totalAmt}
+                        </td>
+                      </tr>
+                    ))
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
       </div>
 

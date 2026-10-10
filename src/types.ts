@@ -16,11 +16,26 @@ export interface MaterialPlanItem {
   realisasi: number;
 }
 
+export interface ProductMaterialRequirement {
+  materialId: string;
+  materialName: string;
+  unit: 'Ton' | 'Kg' | 'Pcs';
+  estimasi: number;
+}
+
+export interface ProductPlanItem {
+  productId: string;
+  productName: string;
+  requirements: ProductMaterialRequirement[];
+}
+
 export interface MonthlyPlan {
   period: string; // YYYY-MM
   monthName: string;
   status: string;
+  planType?: 'material_only' | 'by_product';
   materialsPlan: MaterialPlanItem[];
+  productsPlan?: ProductPlanItem[];
 }
 
 export interface Transaction {
@@ -35,6 +50,7 @@ export interface Transaction {
   currentStock: number;
   notes: string;
   operator: string;
+  forProduct?: string;
   createdAt: string;
 }
 

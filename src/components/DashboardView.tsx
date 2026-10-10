@@ -7,7 +7,9 @@ import {
   RefreshCw,
   Plus,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Layers,
+  PackageCheck
 } from 'lucide-react';
 import type { DashboardData } from '../types';
 
@@ -26,6 +28,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const { kpi, materials, lowStockMaterials, activePlan, recentTransactions } = data;
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>(materials[0]?.id || 'mat-1');
+  const [chartTab, setChartTab] = useState<'materials' | 'products'>('materials');
 
   const selectedMaterial = materials.find(m => m.id === selectedMaterialId) || materials[0];
   const selectedPlanItem = activePlan?.materialsPlan?.find(m => m.materialId === selectedMaterial?.id);
@@ -201,20 +204,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
           </div>
 
-          {/* Legend */}
-          <div className="flex items-center gap-4 text-xs font-medium">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#8e8e93]"></span>
-              <span className="text-[#86868b]">1. Target Planning</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-xs bg-[#34c759]"></span>
-              <span className="text-[#1d1d1f] font-semibold">2. Real Stok Gudang</span>
-            </div>
+          {/* Legend & Toggle */}
+          <div className="flex flex-wrap items-center gap-3 text-xs font-medium">
+            {activePlan?.productsPlan && activePlan.productsPlan.length > 0 && (
+              <div className="flex bg-[#f5f5f7] p-1 rounded-xl border border-black/[0.04]">
+                <button
+                  type="button"
+                  onClick={() => setChartTab('materials')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    chartTab === 'materials' ? 'bg-white text-[#1d1d1f] shadow-xs' : 'text-[#86868b] hover:text-[#1d1d1f]'
+                  }`}
+                >
+                  Grafik 8 Material
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChartTab('products')}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    chartTab === 'products' ? 'bg-white text-[#1d1d1f] shadow-xs' : 'text-[#86868b] hover:text-[#1d1d1f]'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 text-[#34c759]" />
+                  <span>Rincian {activePlan.productsPlan.length} Produk</span>
+                </button>
+              </div>
+            )}
+
+            {chartTab === 'materials' && (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-xs bg-[#8e8e93]"></span>
+                  <span className="text-[#86868b]">1. Target Planning</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-xs bg-[#34c759]"></span>
+                  <span className="text-[#1d1d1f] font-semibold">2. Real Stok Gudang</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 1. GRID 8 MATERIAL: MASING-MASING MEMILIKI 2 GRAFIK BATANG TEGAK */}
+        {chartTab === 'materials' && (
+          <>
+            {/* 1. GRID 8 MATERIAL: MASING-MASING MEMILIKI 2 GRAFIK BATANG TEGAK */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {materials.map((mat) => {
             const planItem = activePlan?.materialsPlan?.find(m => m.materialId === mat.id);
@@ -403,8 +436,71 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           </div>
         )}
+      </>
+    )}
 
+    {/* TAB 2: RINCIAN PER PRODUK MORTAR JADI */}
+    {chartTab === 'products' && activePlan?.productsPlan && (
+      <div className="space-y-4">
+        <div className="text-xs text-[#86868b]">
+          Berikut rincian estimasi kebutuhan material untuk masing-masing produk mortar yang diproduksi pada periode <strong>{activePlan.monthName}</strong>:
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {activePlan.productsPlan.map((prod) => {
+            const usedMaterials = prod.requirements.filter(r => r.estimasi > 0);
+            return (
+              <div 
+                key={prod.productId}
+                className="p-5 rounded-2xl border border-black/[0.06] bg-[#fbfbfd] space-y-3"
+              >
+                <div className="flex items-center justify-between pb-2 border-b border-[#f2f2f7]">
+                  <div className="flex items-center gap-2">
+                    <PackageCheck className="w-4 h-4 text-[#34c759]" />
+                    <h3 className="text-sm font-bold text-[#1d1d1f]">{prod.productName}</h3>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 bg-[#e8f7ec] text-[#248a3d] rounded-full">
+                    {usedMaterials.length} Material Terpakai
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {usedMaterials.length === 0 ? (
+                    <div className="text-xs text-[#86868b] italic py-2">
+                      Belum ada kebutuhan material yang diisi untuk produk ini.
+                    </div>
+                  ) : (
+                    usedMaterials.map(req => {
+                      const totalPlanMat = activePlan.materialsPlan?.find(m => m.materialId === req.materialId)?.estimasi || req.estimasi;
+                      const pct = totalPlanMat > 0 ? Math.round((req.estimasi / totalPlanMat) * 100) : 100;
+                      return (
+                        <div key={req.materialId} className="p-2.5 bg-white rounded-xl border border-black/[0.03] space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-semibold text-[#1d1d1f]">{req.materialName}</span>
+                            <span className="font-mono font-bold text-[#34c759]">
+                              {req.estimasi} {req.unit}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-[#86868b]">
+                            <span>Porsi dari total kebutuhan:</span>
+                            <span className="font-mono">{pct}% ({req.estimasi} dari {totalPlanMat} {req.unit})</span>
+                          </div>
+                          <div className="w-full bg-[#f5f5f7] h-1.5 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#34c759] rounded-full" style={{ width: `${pct}%` }}></div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
+    )}
+
+  </div>
 
       {/* Real Stock Monitoring: 8 Material Utama */}
       <div className="bg-white rounded-2xl border border-black/[0.06] p-6">
@@ -485,6 +581,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <th className="py-2 px-2">Material</th>
                 <th className="py-2 px-2">Tipe</th>
                 <th className="py-2 px-2">Jumlah</th>
+                <th className="py-2 px-2">Untuk Produk</th>
                 <th className="py-2 px-2">Sisa</th>
                 <th className="py-2 px-2">Catatan</th>
                 <th className="py-2 px-2">PIC</th>
@@ -493,7 +590,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <tbody className="divide-y divide-[#f2f2f7]">
               {recentTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-[#86868b]">
+                  <td colSpan={8} className="py-6 text-center text-[#86868b]">
                     Belum ada riwayat transaksi.
                   </td>
                 </tr>
@@ -511,6 +608,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </td>
                     <td className="py-2 px-2 font-mono font-bold text-[#1d1d1f]">
                       {trx.type === 'in' ? `+${trx.amount}` : `-${trx.amount}`} {trx.unit}
+                    </td>
+                    <td className="py-2 px-2">
+                      {trx.forProduct ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#eef7ff] text-[#007aff] border border-[#007aff]/15 flex items-center gap-1 w-fit">
+                          <Layers className="w-2.5 h-2.5" />
+                          <span>{trx.forProduct}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[#86868b]/60 text-[11px]">-</span>
+                      )}
                     </td>
                     <td className="py-2 px-2 font-mono text-[#86868b]">
                       {trx.currentStock} {trx.unit}

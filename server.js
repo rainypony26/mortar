@@ -144,7 +144,9 @@ app.post('/api/plans', (req, res) => {
     period,
     monthName: monthName || period,
     status: 'Aktif',
-    materialsPlan: materialsPlan || []
+    planType: req.body.planType || 'material_only',
+    materialsPlan: materialsPlan || [],
+    productsPlan: req.body.productsPlan || []
   };
 
   // Simpan sebagai satu-satunya planning aktif
@@ -278,6 +280,7 @@ app.post('/api/transactions', (req, res) => {
     currentStock: material.currentStock,
     notes: notes || '-',
     operator: operator || 'Operator',
+    forProduct: req.body.forProduct || '',
     createdAt: new Date().toISOString()
   };
 
@@ -323,8 +326,11 @@ app.post('/api/reset', (req, res) => {
 const distPath = path.join(__dirname, 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api')) {
+      return res.sendFile(path.join(distPath, 'index.html'));
+    }
+    next();
   });
 }
 
